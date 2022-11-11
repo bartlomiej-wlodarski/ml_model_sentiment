@@ -1,16 +1,31 @@
-# This is a sample Python script.
+from flask import Flask,render_template,url_for,request
+import pandas as pd
+import nltk
+from nltk.corpus import stopwords
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+app = Flask(__name__)
 
+tweet_collection = pd.read_csv('trainProcessed.csv', encoding='ISO-8859-1')
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+tweet_collection = tweet_collection[["text", "polarity"]]
 
+# Randomize the entire data set
+randomized_collection = tweet_collection.sample(frac=1, random_state=3)
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+# Calculate index for split
+training_test_index = round(len(randomized_collection) * 0.9)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+# Training/Test split
+training_set = randomized_collection[:training_test_index].reset_index(drop=True)
+test_set = randomized_collection[training_test_index:].reset_index(drop=True)
+
+# remove noise characters
+remove_characters = ["$", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+                     "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "-", "+",
+                     "[", "]", "{", "}", ";", ":", "?", ",", ".", "/", "|", "'",
+                     "\"", "\n", "\t", "\r", "\b", "\f", "\\", "\v", "_"]
+
+for character in remove_characters:
+    training_set["text"] = training_set["text"].replace(character, "")
+
+print(training_set.head())
