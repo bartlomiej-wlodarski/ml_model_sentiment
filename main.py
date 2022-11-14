@@ -6,6 +6,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
+pd.options.display.max_colwidth = 100
 
 
 def clean_text(df, text_field, new_text_field_name):
@@ -32,15 +33,17 @@ def word_pos_tagger(text):
     pos_tagged_text = nltk.pos_tag(text)
     return pos_tagged_text
 
+
 app = Flask(__name__)
 
-tweet_collection = pd.read_csv('smallProcessed.csv', encoding='ISO-8859-1')
+tweet_collection = pd.read_csv('trainProcessed.csv', encoding='ISO-8859-1')
 
-tweet_collection = tweet_collection[["text", "polarity"]]
+tweet_collection = tweet_collection[["text field", "polarity field"]]
 
 # Randomize the entire data set
 randomized_collection = tweet_collection.sample(frac=1, random_state=3)
 randomized_collection = randomized_collection[:500]
+# randomized_collection = tweet_collection[:2]
 
 # Calculate index for split
 training_test_index = round(len(randomized_collection) * 0.9)
@@ -50,22 +53,22 @@ training_set = randomized_collection[:training_test_index].reset_index(drop=True
 test_set = randomized_collection[training_test_index:].reset_index(drop=True)
 
 # remove noise characters
-training_set_clean = clean_text(training_set, "text", "text")
+training_set_clean = clean_text(training_set, "text field", "text field")
 
 # remove stop words
-training_set_clean['text'] = training_set_clean['text'].apply(
+training_set_clean['text field'] = training_set_clean['text field'].apply(
     lambda x: ' '.join([word for word in x.split() if word not in (stopwords.words('english'))]))
 
 # tokenization
-training_set_clean['text'] = training_set_clean['text'].apply(lambda x: word_tokenize(x))
+training_set_clean['text field'] = training_set_clean['text field'].apply(lambda x: word_tokenize(x))
 
 # stemming
-training_set_clean['text'] = training_set_clean['text'].apply(lambda x: word_stemmer(x))
+training_set_clean['text field'] = training_set_clean['text field'].apply(lambda x: word_stemmer(x))
 
 # lemmatization
-training_set_clean['text'] = training_set_clean['text'].apply(lambda x: word_lemmatizer(x))
+training_set_clean['text field'] = training_set_clean['text field'].apply(lambda x: word_lemmatizer(x))
 
-corpus = training_set_clean['text'].sum()
+corpus = training_set_clean['text field'].sum()
 
 temp_set = set(corpus)
 
@@ -73,10 +76,10 @@ temp_set = set(corpus)
 vocabulary = list(temp_set)
 
 # Create the dictionary
-len_training_set = len(training_set_clean['text'])
+len_training_set = len(training_set_clean['text field'])
 word_counts_per_text = {unique_word: [0] * len_training_set for unique_word in vocabulary}
 
-for index, sms in enumerate(training_set_clean['text']):
+for index, sms in enumerate(training_set_clean['text field']):
     for word in sms:
         word_counts_per_text[word][index] += 1
 
@@ -87,34 +90,25 @@ word_counts = pd.DataFrame(word_counts_per_text)
 training_set_final = pd.concat([training_set_clean, word_counts], axis=1)
 
 # Filter the dataframes
-negative = training_set_final[training_set_final['polarity'] == 0].copy()
-positive = training_set_final[training_set_final['polarity'] == 4].copy()
+negative = training_set_final[training_set_final['polarity field'] == 0].copy()
+positive = training_set_final[training_set_final['polarity field'] == 4].copy()
 
 # Calculate
-"""print("negative", negative)
-print("neutral;", neutral)
-print("positive", positive)
-print("negative shape", negative.shape)
-print("negative shape[1]", negative.shape[1])
-print("set shape", training_set_final.shape)
-print("set shape[0]", training_set_final.shape[0])"""
 p_negative = negative.shape[1] / training_set_final.shape[0]
 p_positive = positive.shape[1] / training_set_final.shape[0]
-""" te zmienne są takie same a chyba nie powinny"""
 
 # Calculate vocabulary
-negative_words_per_message = negative['text'].apply(len)
+negative_words_per_message = negative['text field'].apply(len)
 n_negative = negative_words_per_message.sum()
 
-
-positive_words_per_message = positive['text'].apply(len)
+positive_words_per_message = positive['text field'].apply(len)
 n_positive = positive_words_per_message.sum()
 
 n_vocabulary = len(vocabulary)
 
 alpha = 1
 
-# Create three dictionaries that match each unique word with the respective probability value.
+# Create two dictionaries that match each unique word with the respective probability value.
 parameters_negative = {unique_word: 0 for unique_word in vocabulary}
 parameters_positive = {unique_word: 0 for unique_word in vocabulary}
 
@@ -156,15 +150,13 @@ def text_classify(message):
         if word in parameters_positive:
             p_positive_message *= parameters_positive[word]
 
-    print(p_negative_message)
-    print(p_positive_message)
-
-    """ tutaj trzy zmienne są takie same, więc nie ma jak podjąć decyzji """
+    if p_positive_message > p_negative_message:
+        return 1
+    elif p_negative_message > p_positive_message:
+        return -1
+    else:
+        return 0
 
 
 print(text_classify("I'm so pissed off I wanna kill things, murder fuck"))
 print(text_classify("That makes me happy, I'm glad everything is fine"))
-
-print(p_negative)
-print(p_positive)
-
