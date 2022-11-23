@@ -1,9 +1,11 @@
-from flask import Flask, render_template, url_for, request
+import pickle
+
+from flask import Flask
 import pandas as pd
 import re
 import nltk
 from nltk.corpus import stopwords
-from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.tokenize import  word_tokenize
 from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
 pd.options.display.max_colwidth = 100
@@ -29,11 +31,6 @@ def word_lemmatizer(text):
     return lem_text
 
 
-def word_pos_tagger(text):
-    pos_tagged_text = nltk.pos_tag(text)
-    return pos_tagged_text
-
-
 app = Flask(__name__)
 
 tweet_collection = pd.read_csv('trainProcessed.csv', encoding='ISO-8859-1')
@@ -42,8 +39,7 @@ tweet_collection = tweet_collection[["text field", "polarity field"]]
 
 # Randomize the entire data set
 randomized_collection = tweet_collection.sample(frac=1, random_state=3)
-randomized_collection = randomized_collection[:500]
-# randomized_collection = tweet_collection[:2]
+randomized_collection = randomized_collection[:500] # 75000 takes around 10 mins
 
 # Calculate index for split
 training_test_index = round(len(randomized_collection) * 0.9)
@@ -121,6 +117,14 @@ for unique_word in vocabulary:
     parameters_negative[unique_word] = p_unique_word_negative
     parameters_positive[unique_word] = p_unique_word_positive
 
+pickle.dump(parameters_negative, open("parameters_negative", "wb"))
+pickle.dump(parameters_positive, open("parameters_positive", "wb"))
+pickle.dump(p_negative, open("p_negative", "wb"))
+pickle.dump(p_positive, open("p_positive", "wb"))
+
+# pic_parameters_negative = pickle.load(open("parameters_negative", "rb"))
+# print(pic_parameters_negative)
+
 
 def text_classify(message):
     message = message.lower()
@@ -158,5 +162,6 @@ def text_classify(message):
         return 0
 
 
-print(text_classify("I'm so pissed off I wanna kill things, murder fuck"))
-print(text_classify("That makes me happy, I'm glad everything is fine"))
+
+# print(text_classify("I'm so pissed off I wanna kill things, murder fuck"))
+# print(text_classify("That makes me happy, I'm glad everything is fine"))
