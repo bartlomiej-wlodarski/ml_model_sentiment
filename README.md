@@ -1,0 +1,1 @@
+Machine learning model module. Module implementing methods: normalization, tokenization, removing stop words, stemming, and lemmatization using the NLTK library. It also consists of a method for sentiment calculation of the provided message.
